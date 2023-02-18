@@ -1,15 +1,39 @@
 import { InputValues } from "./index";
 
+// type ExtractParam<Path, NextPart> = Path extends `{${infer Param}}` ? Record<Param, string> & NextPart : NextPart;
+
+// type ExctractParams<Path> = Path extends `${infer Segment} ${infer Rest}`
+//   ? ExtractParam<Segment, ExctractParams<Rest>>
+//   : ExtractParam<Path, {}>
+
+// const bar: ExctractParams<"tell me a joke about {jokeType}"> = {jokeType: "some id"};
+
+
+type JokeTypes = "funny" | "dumb"
+
+
+type ExtractParam<Path, NextPart> = Path extends `${infer A}${infer Param}` ? {[AA in A as `${AA}test`]: string } & { 
+  [K in Param]: string
+} & NextPart : NextPart;
+
+type ExctractParams<Path> = Path extends `${infer Segment} ${infer Rest}`
+  ? ExtractParam<Segment, ExctractParams<Rest>>
+  : ExtractParam<Path, {}>
+
+type ParsedFString<FString> = ExctractParams<FString>
+
+const bar: ExctractParams<"tell me {numJokes} jokes about {jokeType}"> = { type: "variable", name: "numJokes"}
+
 export type TemplateFormat = "f-string" | "jinja2";
 
 type ParsedFStringNode =
   | { type: "literal"; text: string }
   | { type: "variable"; name: string };
 
-export const parseFString = (template: string): ParsedFStringNode[] => {
+export const parseFString = <T extends string>(template: T): ParsedFString<T> => {
   // Core logic replicated from internals of pythons built in Formatter class.
   // https://github.com/python/cpython/blob/135ec7cefbaffd516b77362ad2b2ad1025af462e/Objects/stringlib/unicode_format.h#L700-L706
-  const chars = template.split("");
+  const chars: Split<T> = template.split("" as const) as const;
   const nodes: ParsedFStringNode[] = [];
 
   const nextBracket = (bracket: "}" | "{" | "{}", start: number) => {

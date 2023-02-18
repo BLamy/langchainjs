@@ -21,6 +21,21 @@ export type SerializedPromptTemplate = {
   template_format?: TemplateFormat;
 };
 
+type UserOrganisationPath = "/users/{{id}}/organisations/{{organisationId}}";
+
+type Split<S extends string, D extends string> =
+    string extends S ? string[] :
+    S extends '' ? [] :
+    S extends `${infer T}${D}${infer U}` ? [T, ...Split<U, D>] : [S];
+
+type ExtractTemplateParams<TPath extends string> = {
+  [K in Split<TPath, "{{">[number] as K extends `${infer P}}}${string}`
+    ? P
+    : never]: string;
+};
+
+type Result = ExtractTemplateParams<UserOrganisationPath>
+
 /**
  * Inputs to create a {@link PromptTemplate}
  * @augments BasePromptTemplateInput
@@ -122,8 +137,8 @@ export class PromptTemplate
   /**
    * Load prompt template from a template f-string
    */
-  static fromTemplate(template: string) {
-    const names = new Set<string>();
+  static fromTemplate<S extends string>(template: S) {
+    const names = new Set<ExtractTemplateParams<S>>();
     parseFString(template).forEach((node) => {
       if (node.type === "variable") {
         names.add(node.name);
